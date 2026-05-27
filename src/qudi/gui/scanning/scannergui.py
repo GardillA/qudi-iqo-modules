@@ -27,8 +27,8 @@ from typing import Union, Tuple, Optional
 import numpy as np
 from PySide6 import QtCore, QtGui, QtWidgets
 from PySide6.QtGui import QAction
-from PySide2 import QtCore, QtGui, QtWidgets
-from PySide2.QtWidgets import QAction
+#from PySide2 import QtCore, QtGui, QtWidgets
+#from PySide2.QtWidgets import QAction
 
 import qudi.util.uic as uic
 from qudi.core.connector import Connector
@@ -76,7 +76,6 @@ class ConfocalMainWindow(QtWidgets.QMainWindow):
 
     def mouseDoubleClickEvent(self, event):
         if event.button() == QtCore.Qt.MouseButton.LeftButton:
-        if event.button() == QtCore.Qt.LeftButton:
             self.action_utility_zoom.setChecked(not self.action_utility_zoom.isChecked())
             event.accept()
         else:
@@ -92,8 +91,6 @@ class SaveDialog(QtWidgets.QDialog):
         self.setWindowTitle(title)
         self.setWindowModality(QtCore.Qt.WindowModality.WindowModal)
         self.setAttribute(QtCore.Qt.WidgetAttribute.WA_ShowWithoutActivating)
-        self.setWindowModality(QtCore.Qt.WindowModal)
-        self.setAttribute(QtCore.Qt.WA_ShowWithoutActivating)
 
         # Dialog layout
         self.text = QtWidgets.QLabel("<font size='16'>" + text + "</font>")
@@ -125,11 +122,10 @@ class ScannerGui(GuiBase):
     _scanning_logic = Connector(name='scanning_logic', interface=ScanningProbeLogic)
     _data_logic = Connector(name='data_logic', interface=ScanningDataLogic)
     _optimize_logic = Connector(name='optimize_logic', interface=ScanningOptimizeLogic)
-    _scanning_logic = Connector(name='scanning_logic', interface='ScanningProbeLogic')
-    _data_logic = Connector(name='data_logic', interface='ScanningDataLogic')
-    _optimize_logic = Connector(name='optimize_logic', interface='ScanningOptimizeLogic')
+
 
     # config options for gui
+    _default_position_unit_prefix = ConfigOption(name='default_position_unit_prefix', default='u')
     # minimum crosshair size as fraction of the displayed scan range
     _min_crosshair_size_fraction = ConfigOption(name='min_crosshair_size_fraction', default=1 / 50, missing='nothing')
 
@@ -218,63 +214,43 @@ class ScannerGui(GuiBase):
             self._scanning_logic().set_target_position, QtCore.Qt.ConnectionType.QueuedConnection
         )
         self.sigFrequencyChanged.connect(scan_logic.set_scan_frequency, QtCore.Qt.ConnectionType.QueuedConnection)
-        self.sigBackFrequencyChanged.connect(scan_logic.set_back_scan_frequency, QtCore.Qt.ConnectionType.QueuedConnection)
-        self.sigUseBackScanSettings.connect(scan_logic.set_use_back_scan_settings, QtCore.Qt.ConnectionType.QueuedConnection)
+        self.sigBackFrequencyChanged.connect(scan_logic.set_back_scan_frequency,
+                                             QtCore.Qt.ConnectionType.QueuedConnection)
+        self.sigUseBackScanSettings.connect(scan_logic.set_use_back_scan_settings,
+                                            QtCore.Qt.ConnectionType.QueuedConnection)
         self.sigToggleScan.connect(scan_logic.toggle_scan, QtCore.Qt.ConnectionType.QueuedConnection)
         self.sigToggleOptimize.connect(
             self._optimize_logic().toggle_optimize, QtCore.Qt.ConnectionType.QueuedConnection
         )
-        self._mw.action_optimize_position.triggered[bool].connect(self.toggle_optimize, QtCore.Qt.ConnectionType.QueuedConnection)
-        self.sigScannerTargetChanged.connect(self._scanning_logic().set_target_position, QtCore.Qt.QueuedConnection)
-        self.sigFrequencyChanged.connect(scan_logic.set_scan_frequency, QtCore.Qt.QueuedConnection)
-        self.sigBackFrequencyChanged.connect(scan_logic.set_back_scan_frequency, QtCore.Qt.QueuedConnection)
-        self.sigUseBackScanSettings.connect(scan_logic.set_use_back_scan_settings, QtCore.Qt.QueuedConnection)
-        self.sigToggleScan.connect(scan_logic.toggle_scan, QtCore.Qt.QueuedConnection)
-        self.sigToggleOptimize.connect(self._optimize_logic().toggle_optimize, QtCore.Qt.QueuedConnection)
-        self._mw.action_optimize_position.triggered[bool].connect(self.toggle_optimize, QtCore.Qt.QueuedConnection)
+        self._mw.action_optimize_position.triggered[bool].connect(self.toggle_optimize,
+                                                                  QtCore.Qt.ConnectionType.QueuedConnection)
+
         self._optimize_logic().sigOptimizeSequenceDimensionsChanged.connect(
             self._init_optimizer_dockwidget, QtCore.Qt.ConnectionType.QueuedConnection
-            self._init_optimizer_dockwidget, QtCore.Qt.QueuedConnection
-        )
-        self._optimize_logic().sigOptimizeSequenceDimensionsChanged.connect(
-            self.update_optimizer_settings_from_logic, QtCore.Qt.ConnectionType.QueuedConnection
-            self.update_optimizer_settings_from_logic, QtCore.Qt.QueuedConnection
         )
         self._mw.action_restore_default_view.triggered.connect(self.restore_default_view)
         self._mw.action_save_all_scans.triggered.connect(lambda x: self.save_scan_data(scan_axes=None))
         self.sigSaveScan.connect(self._data_logic().save_scan_by_axis, QtCore.Qt.ConnectionType.QueuedConnection)
         self.sigSaveFinished.connect(self._save_dialog.hide, QtCore.Qt.ConnectionType.QueuedConnection)
-        self.sigSaveScan.connect(self._data_logic().save_scan_by_axis, QtCore.Qt.QueuedConnection)
-        self.sigSaveFinished.connect(self._save_dialog.hide, QtCore.Qt.QueuedConnection)
         self._data_logic().sigSaveStateChanged.connect(self._track_save_status)
 
         self._mw.action_utility_zoom.toggled.connect(self.toggle_cursor_zoom)
         self._mw.action_utility_full_range.triggered.connect(self.set_full_range, QtCore.Qt.ConnectionType.QueuedConnection)
         self._mw.action_history_forward.triggered.connect(self._data_logic().history_next, QtCore.Qt.ConnectionType.QueuedConnection)
         self._mw.action_history_back.triggered.connect(self._data_logic().history_previous, QtCore.Qt.ConnectionType.QueuedConnection)
-        self._mw.action_utility_full_range.triggered.connect(self.set_full_range, QtCore.Qt.QueuedConnection)
-        self._mw.action_history_forward.triggered.connect(self._data_logic().history_next, QtCore.Qt.QueuedConnection)
-        self._mw.action_history_back.triggered.connect(self._data_logic().history_previous, QtCore.Qt.QueuedConnection)
 
         self._scanning_logic().sigScannerTargetChanged.connect(self.scanner_target_updated, QtCore.Qt.ConnectionType.QueuedConnection)
-        self._scanning_logic().sigScannerTargetChanged.connect(self.scanner_target_updated, QtCore.Qt.QueuedConnection)
         self._scanning_logic().sigScanSettingsChanged.connect(
             self.update_scanner_settings_from_logic, QtCore.Qt.ConnectionType.QueuedConnection
-            self.update_scanner_settings_from_logic, QtCore.Qt.QueuedConnection
         )
         self._scanning_logic().sigScanStateChanged.connect(self.scan_state_updated, QtCore.Qt.ConnectionType.QueuedConnection)
         self._data_logic().sigHistoryScanDataRestored.connect(self._update_from_history, QtCore.Qt.ConnectionType.QueuedConnection)
         self._optimize_logic().sigOptimizeStateChanged.connect(self.optimize_state_updated, QtCore.Qt.ConnectionType.QueuedConnection)
-        self._scanning_logic().sigScanStateChanged.connect(self.scan_state_updated, QtCore.Qt.QueuedConnection)
-        self._data_logic().sigHistoryScanDataRestored.connect(self._update_from_history, QtCore.Qt.QueuedConnection)
-        self._optimize_logic().sigOptimizeStateChanged.connect(self.optimize_state_updated, QtCore.Qt.QueuedConnection)
         self.sigOptimizerSettingsChanged.connect(
-            self._optimize_logic().set_optimize_settings, QtCore.Qt.ConnectionType.QueuedConnection)
-            self._optimize_logic().set_optimize_settings, QtCore.Qt.QueuedConnection
+            self._optimize_logic().set_optimize_settings, QtCore.Qt.ConnectionType.QueuedConnection
         )
 
         self.sigShowSaveDialog.connect(
-            lambda x: self._save_dialog.show() if x else self._save_dialog.hide(), QtCore.Qt.ConnectionType.DirectConnection
             lambda x: self._save_dialog.show() if x else self._save_dialog.hide(), QtCore.Qt.DirectConnection
         )
 
@@ -282,37 +258,29 @@ class ScannerGui(GuiBase):
         tilt_widget = self.tilt_correction_dockwidget
         tilt_widget.tilt_set_01_pushButton.clicked.connect(
             lambda: self.tilt_corr_set_support_vector(0), QtCore.Qt.ConnectionType.QueuedConnection
-            lambda: self.tilt_corr_set_support_vector(0), QtCore.Qt.QueuedConnection
         )
         tilt_widget.tilt_set_02_pushButton.clicked.connect(
             lambda: self.tilt_corr_set_support_vector(1), QtCore.Qt.ConnectionType.QueuedConnection
-            lambda: self.tilt_corr_set_support_vector(1), QtCore.Qt.QueuedConnection
         )
         tilt_widget.tilt_set_03_pushButton.clicked.connect(
             lambda: self.tilt_corr_set_support_vector(2), QtCore.Qt.ConnectionType.QueuedConnection
-            lambda: self.tilt_corr_set_support_vector(2), QtCore.Qt.QueuedConnection
         )
         tilt_widget.tilt_set_04_pushButton.clicked.connect(
             lambda: self.tilt_corr_set_support_vector(3), QtCore.Qt.ConnectionType.QueuedConnection
-            lambda: self.tilt_corr_set_support_vector(3), QtCore.Qt.QueuedConnection
         )
         tilt_widget.auto_origin_switch.toggle_switch.sigStateChanged.connect(
             self.apply_tilt_corr_support_vectors, QtCore.Qt.ConnectionType.QueuedConnection
-            self.apply_tilt_corr_support_vectors, QtCore.Qt.QueuedConnection
         )
         self._mw.action_toggle_tilt_correction.triggered.connect(
             self.toggle_tilt_correction, QtCore.Qt.ConnectionType.QueuedConnection
-            self.toggle_tilt_correction, QtCore.Qt.QueuedConnection
         )
         [
             box.valueChanged.connect(self.apply_tilt_corr_support_vectors, QtCore.Qt.ConnectionType.QueuedConnection)
-            box.valueChanged.connect(self.apply_tilt_corr_support_vectors, QtCore.Qt.QueuedConnection)
             for box_row in tilt_widget.support_vecs_box
             for box in box_row
         ]
         self._scanning_logic().sigTiltCorrSettingsChanged.connect(
             self.tilt_corr_support_vector_updated, QtCore.Qt.ConnectionType.QueuedConnection
-            self.tilt_corr_support_vector_updated, QtCore.Qt.QueuedConnection
         )
 
         # Initialize dockwidgets to default view
@@ -403,7 +371,6 @@ class ScannerGui(GuiBase):
         self._osd.rejected.connect(self.update_optimizer_settings_from_logic)
         self._osd.button_box.button(QtWidgets.QDialogButtonBox.StandardButton.Apply).clicked.connect(
             self.change_optimizer_settings)
-        self._osd.button_box.button(QtWidgets.QDialogButtonBox.Apply).clicked.connect(self.change_optimizer_settings)
         # pull in data
         self.update_optimizer_settings_from_logic()
 
@@ -414,26 +381,25 @@ class ScannerGui(GuiBase):
         self._ssd = ScannerSettingDialog(scan_logic.scanner_axes.values(), scan_logic.scanner_constraints)
 
         self._ssd.settings_widget.configure_backward_scan_checkbox.setChecked(scan_logic.use_back_scan_settings)
+        self._ssd.settings_widget.set_backward_settings_visibility(False)#scan_logic.use_back_scan_settings)
         # Connect MainWindow actions
         self._mw.action_scanner_settings.triggered.connect(lambda x: self._ssd.exec_())
 
         # Connect the action of the settings dialog with the GUI module:
         self._ssd.accepted.connect(self.apply_scanner_settings)
         self._ssd.rejected.connect(self.update_scanner_settings_from_logic)
-        self._ssd.button_box.button(QtWidgets.QDialogButtonBox.StandardButton.Apply).clicked.connect(self.apply_scanner_settings)
-        self._ssd.button_box.button(QtWidgets.QDialogButtonBox.Apply).clicked.connect(self.apply_scanner_settings)
-
+        self._ssd.button_box.button(QtWidgets.QDialogButtonBox.StandardButton.Apply).clicked.connect(
+            self.apply_scanner_settings)
     def _init_static_dockwidgets(self):
         scan_logic: ScanningProbeLogic = self._scanning_logic()
         self.scanner_control_dockwidget = AxesControlDockWidget(
             tuple(scan_logic.scanner_axes.values()), scan_logic.back_scan_capability
         )
+        self.scanner_control_dockwidget.set_backward_settings_visibility(False)#scan_logic.use_back_scan_settings)
         if self._default_position_unit_prefix is not None:
             self.scanner_control_dockwidget.set_assumed_unit_prefix(self._default_position_unit_prefix)
         self.scanner_control_dockwidget.setAllowedAreas(QtCore.Qt.DockWidgetArea.TopDockWidgetArea)
         self._mw.addDockWidget(QtCore.Qt.DockWidgetArea.TopDockWidgetArea, self.scanner_control_dockwidget)
-        self.scanner_control_dockwidget.setAllowedAreas(QtCore.Qt.TopDockWidgetArea)
-        self._mw.addDockWidget(QtCore.Qt.TopDockWidgetArea, self.scanner_control_dockwidget)
         self.scanner_control_dockwidget.visibilityChanged.connect(self._mw.action_view_scanner_control.setChecked)
         self._mw.action_view_scanner_control.triggered[bool].connect(self.scanner_control_dockwidget.setVisible)
 
@@ -462,8 +428,6 @@ class ScannerGui(GuiBase):
         self.tilt_correction_dockwidget = TiltCorrectionDockWidget(scanner_axes=self._scanning_logic().scanner_axes)
         self.tilt_correction_dockwidget.setAllowedAreas(QtCore.Qt.DockWidgetArea.BottomDockWidgetArea)
         self._mw.addDockWidget(QtCore.Qt.DockWidgetArea.BottomDockWidgetArea, self.tilt_correction_dockwidget)
-        self.tilt_correction_dockwidget.setAllowedAreas(QtCore.Qt.BottomDockWidgetArea)
-        self._mw.addDockWidget(QtCore.Qt.BottomDockWidgetArea, self.tilt_correction_dockwidget)
         self.tilt_correction_dockwidget.setVisible(False)
         self.tilt_correction_dockwidget.visibilityChanged.connect(self._mw.action_view_tilt_correction.setChecked)
         self._mw.action_view_tilt_correction.triggered[bool].connect(self.tilt_correction_dockwidget.setVisible)
@@ -482,7 +446,6 @@ class ScannerGui(GuiBase):
                 pass
         else:
             self._mw.addDockWidget(QtCore.Qt.DockWidgetArea.TopDockWidgetArea, optimizer_dockwidget)
-            self._mw.addDockWidget(QtCore.Qt.TopDockWidgetArea, optimizer_dockwidget)
 
         self.optimizer_dockwidget = optimizer_dockwidget
         self.optimizer_dockwidget.visibilityChanged.connect(self._mw.action_view_optimizer.setChecked)
@@ -510,13 +473,11 @@ class ScannerGui(GuiBase):
         self.scanner_control_dockwidget.setFloating(False)
         self.scanner_control_dockwidget.show()
         self._mw.addDockWidget(QtCore.Qt.DockWidgetArea.BottomDockWidgetArea, self.scanner_control_dockwidget)
-        self._mw.addDockWidget(QtCore.Qt.BottomDockWidgetArea, self.scanner_control_dockwidget)
 
         # Add tilt correction dock widget
         self.tilt_correction_dockwidget.setFloating(False)
         self.tilt_correction_dockwidget.setVisible(False)
         self._mw.addDockWidget(QtCore.Qt.DockWidgetArea.BottomDockWidgetArea, self.tilt_correction_dockwidget)
-        self._mw.addDockWidget(QtCore.Qt.BottomDockWidgetArea, self.tilt_correction_dockwidget)
 
         # Add dynamically created dock widgets to layout
         dockwidgets_2d = tuple(self.scan_2d_dockwidgets.values())
@@ -529,18 +490,15 @@ class ScannerGui(GuiBase):
             for i, dockwidget in enumerate(dockwidgets_2d):
                 dockwidget.show()
                 self._mw.addDockWidget(QtCore.Qt.DockWidgetArea.TopDockWidgetArea, dockwidget)
-                self._mw.addDockWidget(QtCore.Qt.TopDockWidgetArea, dockwidget)
                 dockwidget.setFloating(False)
         if has_1d_scans:
             for i, dockwidget in enumerate(dockwidgets_1d):
                 dockwidget.show()
                 self._mw.addDockWidget(QtCore.Qt.DockWidgetArea.TopDockWidgetArea, dockwidget)
-                self._mw.addDockWidget(QtCore.Qt.TopDockWidgetArea, dockwidget)
                 dockwidget.setFloating(False)
         # Add optimizer dock widget to layout
         self.optimizer_dockwidget.show()
         self._mw.addDockWidget(QtCore.Qt.DockWidgetArea.TopDockWidgetArea, self.optimizer_dockwidget)
-        self._mw.addDockWidget(QtCore.Qt.TopDockWidgetArea, self.optimizer_dockwidget)
         self.optimizer_dockwidget.setFloating(False)
 
         # split scan dock widget with optimizer dock widget if needed. Resize all groups.
@@ -560,22 +518,14 @@ class ScannerGui(GuiBase):
             self._mw.splitDockWidget(dockwidgets_1d[0], self.optimizer_dockwidget, QtCore.Qt.Orientation.Vertical)
             self._mw.resizeDocks((dockwidgets_1d[0], self.optimizer_dockwidget), (3, 2), QtCore.Qt.Orientation.Vertical)
             self._mw.resizeDocks((dockwidgets_2d[0], dockwidgets_1d[0]), (1, 1), QtCore.Qt.Orientation.Horizontal)
-            self._mw.splitDockWidget(dockwidgets_1d[0], self.optimizer_dockwidget, QtCore.Qt.Vertical)
-            self._mw.resizeDocks((dockwidgets_1d[0], self.optimizer_dockwidget), (3, 2), QtCore.Qt.Vertical)
-            self._mw.resizeDocks((dockwidgets_2d[0], dockwidgets_1d[0]), (1, 1), QtCore.Qt.Horizontal)
         elif multiple_2d_scans:
             self._mw.splitDockWidget(dockwidgets_2d[1], self.optimizer_dockwidget, QtCore.Qt.Orientation.Vertical)
             self._mw.resizeDocks((dockwidgets_2d[1], self.optimizer_dockwidget), (3, 2), QtCore.Qt.Orientation.Vertical)
             self._mw.resizeDocks((dockwidgets_2d[0], dockwidgets_2d[1]), (1, 1), QtCore.Qt.Orientation.Horizontal)
-            self._mw.splitDockWidget(dockwidgets_2d[1], self.optimizer_dockwidget, QtCore.Qt.Vertical)
-            self._mw.resizeDocks((dockwidgets_2d[1], self.optimizer_dockwidget), (3, 2), QtCore.Qt.Vertical)
-            self._mw.resizeDocks((dockwidgets_2d[0], dockwidgets_2d[1]), (1, 1), QtCore.Qt.Horizontal)
         elif has_1d_scans:
             self._mw.resizeDocks((dockwidgets_1d[0], self.optimizer_dockwidget), (1, 1), QtCore.Qt.Orientation.Horizontal)
-            self._mw.resizeDocks((dockwidgets_1d[0], self.optimizer_dockwidget), (1, 1), QtCore.Qt.Horizontal)
         elif has_2d_scans:
             self._mw.resizeDocks((dockwidgets_2d[0], self.optimizer_dockwidget), (1, 1), QtCore.Qt.Orientation.Horizontal)
-            self._mw.resizeDocks((dockwidgets_2d[0], self.optimizer_dockwidget), (1, 1), QtCore.Qt.Horizontal)
 
     def _tabify_dockwidgets(self):
         dockwidgets_2d = tuple(self.scan_2d_dockwidgets.values())
@@ -702,8 +652,6 @@ class ScannerGui(GuiBase):
 
         dockwidget.setAllowedAreas(QtCore.Qt.DockWidgetArea.TopDockWidgetArea)
         self._mw.addDockWidget(QtCore.Qt.DockWidgetArea.TopDockWidgetArea, dockwidget)
-        dockwidget.setAllowedAreas(QtCore.Qt.TopDockWidgetArea)
-        self._mw.addDockWidget(QtCore.Qt.TopDockWidgetArea, dockwidget)
         dockwidget.scan_widget.sigMarkerPositionChanged.connect(self.__get_marker_update_func(axes))
         dockwidget.scan_widget.toggle_scan_button.clicked.connect(self.__get_toggle_scan_func(axes))
         dockwidget.scan_widget.save_scan_button.clicked.connect(self.__get_save_scan_data_func(axes))
@@ -712,7 +660,6 @@ class ScannerGui(GuiBase):
     def _add_tilt_correction_dock_widget(self):
         dockwidget = TiltCorrectionDockWidget()
         self._mw.addDockWidget(QtCore.Qt.DockWidgetArea.TopDockWidgetArea, dockwidget)
-        self._mw.addDockWidget(QtCore.Qt.TopDockWidgetArea, dockwidget)
 
     def set_active_tab(self, axes):
         avail_axs = list(self.scan_1d_dockwidgets.keys())
@@ -764,6 +711,7 @@ class ScannerGui(GuiBase):
             self._ssd.settings_widget.set_backward_frequency(ax, backward)
 
         self._ssd.settings_widget.configure_backward_scan = scan_logic.use_back_scan_settings
+        self.scanner_control_dockwidget.set_backward_settings_visibility(False)#scan_logic.use_back_scan_settings)
 
     @QtCore.Slot()
     def set_full_range(self) -> None:
@@ -1236,7 +1184,6 @@ class ToggleIconsQAction(QAction):
         super().__init__(self.icon_off, text, parent, checkable=True)
 
         self.triggered.connect(self.set_state, QtCore.Qt.ConnectionType.QueuedConnection)
-        self.triggered.connect(self.set_state, QtCore.Qt.QueuedConnection)
 
     def set_state(self, enabled):
         if enabled:

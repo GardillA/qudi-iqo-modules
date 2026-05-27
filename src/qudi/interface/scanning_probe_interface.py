@@ -51,6 +51,7 @@ class ScannerChannel:
     name: str
     unit: str = ''
     # saving this as str instead of e.g. np.float64 object eases __dict__ representation
+    conversion: float = 1.0
     dtype: str = 'float64'
 
     def __post_init__(self):

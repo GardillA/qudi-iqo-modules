@@ -653,7 +653,7 @@ class PiezoScannerInterfuseBare(ScanningProbeInterface):
             self.constraints.check_back_scan_settings(backward_settings=settings, forward_settings=self._scan_settings)
             self._back_scan_settings = settings
 
-    def move_absolute(self, position):
+    def move_absolute(self, position, velocity = None, blocking = False):
         """Move the scanning probe to an absolute position as fast as possible.
 
         This function moves all axes to the values in position
@@ -677,7 +677,7 @@ class PiezoScannerInterfuseBare(ScanningProbeInterface):
                 self._current_position.update(position)
             return self._current_position
 
-    def move_relative(self, distance):
+    def move_relative(self, distance, velocity = None, blocking = False):
         """Move the scanning probe by a relative distance from the current target position as fast
         as possible
 
